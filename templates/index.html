@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cisco Router Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div class="login-card" id="loginCard">
+            <div class="cisco-logo"></div>
+            <h1>Cisco Router Management</h1>
+            <p class="subtitle">Sistema de Administración de Routers</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="login-btn">Iniciar Sesión</button>
+            </form>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="dashboard" id="dashboard">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Panel de Control</h1>
+                <div class="user-info">
+                    <span class="user-badge" id="userBadge">Admin</span>
+                    <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+
+            <div class="sections-grid" id="sectionsGrid">
+                <!-- Monitoreo -->
+                <div class="section-card">
+                    <h3>📊 Monitoreo</h3>
+                    <ul>
+                        <li onclick="getConfig(event)">Ver configuración</li>
+                        <li onclick="getInterfaces(event)">Ver interfaces activas</li>
+                        <li onclick="getCDPNeighbors(event)">CDP (Cisco Discovery Protocol)</li>
+                        <li onclick="getTraffic(event)">Tráfico de paquetes en interfaces</li>
+                    </ul>
+                </div>
+
+                <!-- Mantenimiento -->
+                <div class="section-card">
+                    <h3>🔧 Mantenimiento</h3>
+                    <ul>
+                        <li onclick="simulatePatch(event)">Simular parches de actualización</li>
+                        <li onclick="applyTemplate(event)">Aplicar plantilla YAML</li>
+                        <li onclick="backupConfig(event)">Backup de configuraciones</li>
+                    </ul>
+                </div>
+
+                <!-- Seguridad -->
+                <div class="section-card">
+                    <h3>🔒 Seguridad</h3>
+                    <ul>
+                        <li onclick="changePassword(event)">Cambiar contraseñas</li>
+                        <li onclick="manageUsers(event)">Gestión de usuarios</li>
+                        <li onclick="configureACLs(event)">Configurar ACLs</li>
+                        <li onclick="auditSecurity(event)">Auditoría de seguridad</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div id="results" style="margin-top: 30px;"></div>
+        </div>
+
+        <!-- Modal para ingresar datos -->
+        <div id="inputModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center;">
+            <div style="background:white; padding:20px; border-radius:10px; max-width:400px; width:90%;">
+                <h3 id="modalTitle"></h3>
+                <input type="text" id="modalInput" placeholder="Ingresa valor" style="width:100%; padding:10px; margin:15px 0;">
+                <button onclick="submitModal()" style="background:#667eea; color:white; border:none; padding:10px 20px; border-radius:5px;">Aceptar</button>
+                <button onclick="closeModal()" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:5px; margin-left:10px;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAction = null;
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('loginCard').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    document.getElementById('userBadge').innerText = data.role.toUpperCase() + ": " + data.username;
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+
+        function logout() {
+            fetch('/logout', {method: 'POST'})
+            .then(() => {
+                document.getElementById('loginCard').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+            });
+        }
+
+        // Función genérica para abrir modal
+        function openModal(action, title) {
+            currentAction = action;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalInput').value = '';
+            document.getElementById('inputModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('inputModal').style.display = 'none';
+        }
+
+        function submitModal() {
+            const input = document.getElementById('modalInput').value;
+            if (input && currentAction) {
+                currentAction(input);
+                closeModal();
+            }
+        }
+
+        // Monitoreo
+        function getConfig() {
+            openModal((device) => {
+                showLoading();
+                fetch('/monitoring/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Ver configuración de dispositivo");
+        }
+
+        function getInterfaces() {
+            openModal((device) => {
+                showLoading();
+                fetch('/monitoring/interfaces', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Ver interfaces activas");
+        }
+
+        function getCDPNeighbors() {
+            openModal((device) => {
+                showLoading();
+                fetch('/monitoring/cdp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Ver vecinos CDP");
+        }
+
+        function getTraffic() {
+            openModal((device) => {
+                showLoading();
+                fetch('/monitoring/traffic', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Ver tráfico de paquetes");
+        }
+
+        // Mantenimiento
+        function simulatePatch() {
+            openModal((device) => {
+                showLoading();
+                fetch('/maintenance/patch_simulation', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Simulacion de parche al sistema");
+        }
+
+        function applyTemplate() {
+            openModal((device) => {
+                showLoading();
+                fetch('/maintenance/apply_template', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        device_name: device
+                    })
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Aplicar template");
+        }
+
+        function backupConfig() {
+            openModal((device) => {
+	              showLoading();
+	              fetch('/maintenance/backup', {
+	                  method: 'POST',
+	                  headers: {'Content-Type': 'application/json'},
+	                  body: JSON.stringify({device_name: device})
+	              })
+	              .then(res => res.json())
+	              .then(showResult);
+            },"Backup completadoo");
+        }
+
+        // Seguridad
+        function changePassword() {
+            openModal((device) => {
+                showLoading();
+                fetch('/security/change_password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Cambiar contraseña de dispositivo");
+        }
+
+        function manageUsers() {
+            openModal((device) => {
+                showLoading();
+                fetch('/security/manage_users', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        device_name: device,
+                        action: 'add',
+                        username: 'Jenny',
+                        password: 'pass123'
+                    })
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Gestion de usuarios");
+        }
+
+        function configureACLs() {
+            openModal((device) => {
+                showLoading();
+                fetch('/security/configure_acls', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Configuracion de acls");
+        }
+
+        function auditSecurity() {
+            openModal((device) => {
+                showLoading();
+                fetch('/security/audit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({device_name: device})
+                })
+                .then(res => res.json())
+                .then(showResult);
+            }, "Configuracion de acls");
+        }
+
+        // Mostrar resultados
+        function showLoading() {
+            document.getElementById('results').innerHTML = '<div class="loading">Procesando solicitud...</div>';
+        }
+
+        function showResult(data) {
+            if (data.success) {
+                document.getElementById('results').innerHTML = `
+                    <div class="result-card success">
+                        <h4>Resultado</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } else {
+                document.getElementById('results').innerHTML = `
+                    <div class="result-card error">
+                        <h4>Error</h4>
+                        <pre>${data.error || 'Ocurrió un problema'}</pre>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

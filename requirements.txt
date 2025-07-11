@@ -1,0 +1,5 @@
+Flask==3.0.3
+PyYAML==6.0.1
+netmiko==4.2.0
+paramiko==3.4.0
+MarkupSafe==2.1.5
