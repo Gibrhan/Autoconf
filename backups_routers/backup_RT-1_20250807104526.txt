@@ -1,0 +1,149 @@
+Building configuration...
+
+Current configuration : 1841 bytes
+!
+version 12.4
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname RT-1
+!
+boot-start-marker
+boot-end-marker
+!
+security passwords min-length 5
+enable secret 5 $1$55Hx$wlbtBtipy0oRhuuZrWY1n0
+!
+no aaa new-model
+memory-size iomem 5
+no ip icmp rate-limit unreachable
+ip cef
+!
+!
+!
+!
+no ip domain lookup
+ip domain name uttt.edu.mx
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+username admin password 7 011202095205575D72
+username user password 7 071A32495C584B56
+username gibrhan password 7 00031A04550958525A
+username Jenny privilege 15 password 7 08314D5D1A485744
+archive
+ log config
+  hidekeys
+! 
+!
+!
+!
+ip tcp synwait-time 5
+ip ssh time-out 3
+ip ssh version 2
+!
+!
+!
+!
+interface FastEthernet0/0
+ ip address 192.168.1.254 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface Serial0/0
+ ip address 192.168.100.1 255.255.255.252
+ clock rate 64000
+!
+interface FastEthernet0/1
+ no ip address
+ shutdown
+ duplex auto
+ speed auto
+!
+interface Serial0/1
+ ip address 192.168.50.1 255.255.255.252
+ clock rate 64000
+!
+interface Serial0/2
+ ip address 192.168.40.1 255.255.255.252
+ clock rate 64000
+!
+interface FastEthernet1/0
+ no ip address
+ shutdown
+ duplex auto
+ speed auto
+!
+router rip
+ version 2
+ network 192.168.1.0
+ network 192.168.40.0
+ network 192.168.50.0
+ network 192.168.100.0
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+no cdp log mismatch duplex
+!
+!
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+!
+!
+banner motd ^C
+Acceso Restringido 
+Solo Personal 
+Autorizado y Certificado^C
+!
+line con 0
+ exec-timeout 0 45
+ privilege level 15
+ password 7 1511021F07257A767B
+ logging synchronous
+ login
+line aux 0
+ exec-timeout 0 0
+ privilege level 15
+ logging synchronous
+line vty 0 4
+ exec-timeout 0 45
+ login local
+ transport input ssh
+!
+!
+end
